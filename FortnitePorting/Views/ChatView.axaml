@@ -489,8 +489,8 @@
                 Background="{DynamicResource ContentBorderLayer2BackgroundBrush}"
                 BorderBrush="{DynamicResource ContentBorderLayer2BorderBrush}" BorderThickness="2 0 0 0">
 
-            <Grid Margin="{ext:Space 1}">
-                <controls:DynamicFadeScrollViewer>
+            <Grid Margin="{ext:Space 1}" RowDefinitions="*,Auto">
+                <controls:DynamicFadeScrollViewer Grid.Row="0">
                     <ItemsControl ItemsSource="{Binding Chat.UsersByGroup}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -583,6 +583,16 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </controls:DynamicFadeScrollViewer>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center"
+                            Margin="{ext:Space 0, 1, 0, 0}" Spacing="6" Opacity="0.65">
+                    <Viewbox Width="18" Height="18" Stretch="Uniform">
+                        <Path Fill="White"
+                              Data="M27.9485,0 C27.536,0.732439 27.1655,1.49013 26.8288,2.26467 C23.6296,1.78479 20.3715,1.78479 17.1639,2.26467 C16.8356,1.49013 16.4568,0.732439 16.0442,0 C13.0387,0.513549 10.109,1.41436 7.33074,2.68561 C1.82482,10.8435 0.334686,18.7908 1.07554,26.6288 C4.29996,29.0113 7.91164,30.8298 11.759,31.9916 C12.6262,30.8298 13.3923,29.5922 14.049,28.3041 C12.803,27.8411 11.5991,27.2602 10.4457,26.5867 C10.7488,26.3678 11.0434,26.1405 11.3297,25.9216 C18.09,29.1039 25.9195,29.1039 32.6883,25.9216 C32.9745,26.1573 33.2692,26.3846 33.5723,26.5867 C32.4189,27.2686 31.215,27.8411 29.9606,28.3126 C30.6172,29.6006 31.3834,30.8382 32.2505,32 C36.0979,30.8382 39.7096,29.0282 42.934,26.6456 C43.8096,17.5533 41.4355,9.67324 36.662,2.69403 C33.8922,1.42278 30.9624,0.521968 27.9569,0.0168377 L27.9485,0 Z M14.9919,21.8048 C12.9124,21.8048 11.1866,19.919 11.1866,17.587 C11.1866,15.2549 12.8451,13.3607 14.9835,13.3607 C17.1218,13.3607 18.8225,15.2634 18.7888,17.587 C18.7551,19.9106 17.1134,21.8048 14.9919,21.8048 Z M29.0177,21.8048 C26.9298,21.8048 25.2208,19.919 25.2208,17.587 C25.2208,15.2549 26.8793,13.3607 29.0177,13.3607 C31.1561,13.3607 32.8482,15.2634 32.8146,17.587 C32.7809,19.9106 31.1392,21.8048 29.0177,21.8048 Z" />
+                    </Viewbox>
+                    <TextBlock Text="Powered by Discord" VerticalAlignment="Center"
+                               Classes="CaptionTextBlockStyle TextFillColorTertiaryBrush" />
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

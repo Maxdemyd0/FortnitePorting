@@ -1,11 +1,18 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FortnitePorting.Controls.Navigation.Sidebar;
 using FortnitePorting.Controls.WrapPanel;
@@ -25,6 +32,8 @@ public partial class AssetsView : ViewBase<AssetsViewModel>
     private bool _suppressSelectionChange;
     private PointerPressedEventArgs? _assetDragArgs;
     private Point _dragStartPosition;
+    private EExportType? _previousAssetType;
+    private CancellationTokenSource? _assetTransitionCts;
 
     public AssetsView()
     {
@@ -53,8 +62,91 @@ public partial class AssetsView : ViewBase<AssetsViewModel>
 
     private void ChangeTab(EExportType assetType)
     {
+        var previousAssetType = _previousAssetType;
+        var direction = GetAssetTabIndex(assetType).CompareTo(GetAssetTabIndex(previousAssetType));
+
         AssetsListBox.SelectedItems?.Clear();
         ViewModel.ChangeTab(assetType);
+        _previousAssetType = assetType;
+
+        if (previousAssetType is null || direction == 0 || !AppSettings.Application.UseTabTransitions)
+            return;
+
+        TaskService.Run(() => AnimateWhenReadyAsync(assetType, direction));
+    }
+
+    private int GetAssetTabIndex(EExportType? assetType)
+    {
+        if (assetType is null) return -1;
+
+        return ViewModel.AssetLoader.Categories
+            .SelectMany(category => category.Loaders)
+            .Select(loader => loader.Type)
+            .ToList()
+            .IndexOf(assetType.Value);
+    }
+
+    private async Task AnimateWhenReadyAsync(EExportType assetType, int direction)
+    {
+        while (ViewModel.AssetLoader.ActiveLoader?.Type == assetType &&
+               !ViewModel.AssetLoader.ActiveLoader.FinishedLoading)
+        {
+            await Task.Delay(50);
+        }
+
+        if (ViewModel.AssetLoader.ActiveLoader?.Type != assetType)
+            return;
+
+        await Task.Delay(16);
+        await Dispatcher.UIThread.InvokeAsync(() => _ = AnimateAssetListAsync(direction));
+    }
+
+    private async Task AnimateAssetListAsync(int direction)
+    {
+        _assetTransitionCts?.Cancel();
+        _assetTransitionCts?.Dispose();
+        _assetTransitionCts = new CancellationTokenSource();
+
+        var animation = new Animation
+        {
+            Duration = TimeSpan.FromMilliseconds(180),
+            Easing = new CubicEaseOut(),
+            Children =
+            {
+                new KeyFrame
+                {
+                    Cue = new Cue(0d),
+                    Setters =
+                    {
+                        new Setter(Visual.OpacityProperty, 0d),
+                        new Setter(TranslateTransform.XProperty, 96d * direction)
+                    }
+                },
+                new KeyFrame
+                {
+                    Cue = new Cue(1d),
+                    Setters =
+                    {
+                        new Setter(Visual.OpacityProperty, 1d),
+                        new Setter(TranslateTransform.XProperty, 0d)
+                    }
+                }
+            }
+        };
+
+        try
+        {
+            await animation.RunAsync(AssetListCard, _assetTransitionCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer tab was selected before this transition completed.
+        }
+        finally
+        {
+            AssetListCard.Opacity = 1;
+            AssetListCard.RenderTransform = null;
+        }
     }
 
     private void OnRandomButtonPressed(object? sender, RoutedEventArgs routedEventArgs)
@@ -104,9 +196,7 @@ public partial class AssetsView : ViewBase<AssetsViewModel>
 
     private void OnItemRealized(object? sender, ItemRealizedEventArgs e)
     {
-        if (e.Item is not AssetItem { IconDisplayImage: null } item) return;
-
-        TaskService.Run(item.LoadBitmapAsync);
+        // The loader finishes thumbnail work before this grid becomes visible.
     }
 
     private void OnStyleBoxPointerPressed(object? sender, PointerPressedEventArgs e)

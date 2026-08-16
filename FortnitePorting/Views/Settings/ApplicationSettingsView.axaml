@@ -45,6 +45,24 @@
                     </StackPanel>
                 </controls:SettingsItem.Footer>
             </controls:SettingsItem>
+
+            <controls:SettingsItem Title="Minimize to Tray" Description="Keeps Fortnite Porting running in the system tray when its window is closed.">
+                <controls:SettingsItem.Footer>
+                    <ToggleSwitch IsChecked="{Binding MinimizeToTray}"/>
+                </controls:SettingsItem.Footer>
+            </controls:SettingsItem>
+
+            <controls:SettingsItem Title="Launch on Startup" Description="Starts Fortnite Porting in the tray when you sign in to Windows.">
+                <controls:SettingsItem.Footer>
+                    <ToggleSwitch IsChecked="{Binding LaunchOnStartup}" IsEnabled="{Binding MinimizeToTray}"/>
+                </controls:SettingsItem.Footer>
+            </controls:SettingsItem>
+
+            <controls:SettingsItem Title="Load Content in the Background" Description="Preloads pakchunks, assets, and files while Fortnite Porting is running in the tray.">
+                <controls:SettingsItem.Footer>
+                    <ToggleSwitch IsChecked="{Binding LoadContentInBackground}" IsEnabled="{Binding MinimizeToTray}"/>
+                </controls:SettingsItem.Footer>
+            </controls:SettingsItem>
             
             <TextBlock Text="Display"
                        Classes="BodyLargeTextBlockStyle"
@@ -58,8 +76,19 @@
                               SelectedItem="{Binding Theme, Converter={StaticResource EnumToRecord}}" >
                         <ComboBox.ItemTemplate>
                             <DataTemplate DataType="ext:EnumRecord">
-                                <controls1:IconText Text="{Binding Description}"
-                                                    Icon="{Binding Icon}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Viewbox Width="20" Height="20" Stretch="Uniform"
+                                             Margin="{ext:Space 0, 0, 1, 0}"
+                                             IsVisible="{Binding HasVectorIcon}">
+                                        <Path Data="{Binding VectorIcon}" Fill="Transparent"
+                                              Stroke="{DynamicResource TextFillPrimaryBrush}" StrokeThickness="2"
+                                              StrokeLineCap="Round" StrokeJoin="Round" />
+                                    </Viewbox>
+                                    <avalonia:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
+                                                           Margin="{ext:Space 0, 0, 1, 0}"
+                                                           IsVisible="{Binding !HasVectorIcon}" />
+                                    <TextBlock Text="{Binding Description}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
@@ -79,16 +108,16 @@
             
             <controls:SettingsItem Title="Audio Device" Description="The device that should be used for audio playback.">
                 <controls:SettingsItem.Footer>
-                    <ComboBox ItemsSource="{Binding AudioDevices}" 
-                              SelectedIndex="{Binding AudioDeviceIndex, Mode=TwoWay}"
-                              HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate DataType="wave:DirectSoundDeviceInfo">
-                                <TextBlock Text="{Binding Description}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
+					<ComboBox ItemsSource="{Binding AudioDevices}"
+                      SelectedIndex="{Binding AudioDeviceIndex, Mode=TwoWay}"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+						<ComboBox.ItemTemplate>
+							<DataTemplate DataType="wave:DirectSoundDeviceInfo">
+								<TextBlock Text="{Binding Description}"/>
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
                 </controls:SettingsItem.Footer>
             </controls:SettingsItem>
 

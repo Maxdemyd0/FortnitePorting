@@ -37,6 +37,18 @@ public partial class DialogQueue : ObservableObject
         }
     }
 
+    public void CloseIfCurrent(string id)
+    {
+        lock (_queueLock)
+        {
+            if (!string.Equals(Current?.Id, id, StringComparison.Ordinal))
+                return;
+
+            Current.IsOpen = false;
+            ShowNext();
+        }
+    }
+
     private void ShowNext()
     {
         lock (_queueLock)

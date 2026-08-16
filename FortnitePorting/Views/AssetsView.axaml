@@ -52,8 +52,8 @@
                                 IsVisible="{Binding !AssetLoader.ActiveLoader.FinishedLoading, FallbackValue=True}"
                                 Status="{Binding AssetLoader.ActiveLoader.LoadingStatus}"
                                 Subtitle="{Binding AssetLoader.ActiveLoader.LoadingPercentageText}"
-                                Value="{Binding AssetLoader.ActiveLoader.LoadedAssets}"
-                                Maximum="{Binding AssetLoader.ActiveLoader.TotalAssets}" />
+                                Value="{Binding AssetLoader.ActiveLoader.ProgressCurrent}"
+                                Maximum="{Binding AssetLoader.ActiveLoader.ProgressTotal}" />
 
         <Grid Grid.Column="1" Margin="{ext:Space 0, 1, 1, 1}"
               IsVisible="{Binding AssetLoader.ActiveLoader.FinishedLoading, FallbackValue=False}"
@@ -169,7 +169,7 @@
 
                 </Grid>
 
-                <controls:ContentCard Grid.Row="2">
+                <controls:ContentCard x:Name="AssetListCard" Grid.Row="2">
                     <Grid>
                         <controls:DynamicFadeScrollViewer Margin="{ext:Space 1}">
                             <ListBox x:Name="AssetsListBox" SelectionMode="Multiple" AutoScrollToSelectedItem="False"
@@ -222,6 +222,9 @@
                                                     <MenuItem Header="Copy Path"
                                                               Icon="{material:MaterialIconExt Clipboard}"
                                                               Command="{Binding CopyPathCommand}" />
+													<MenuItem Header="Properties"
+                                                              Icon="{material:MaterialIconExt InformationOutline}"
+                                                              Command="{Binding PreviewPropertiesCommand}" />
                                                     <MenuItem Header="Save Icon"
                                                               Icon="{material:MaterialIconExt ContentSave}"
                                                               Command="{Binding SaveIconCommand}" />

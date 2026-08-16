@@ -25,7 +25,7 @@ public class AudioPlaybackService(SettingsService settings) : IService
     {
         var output = new WaveOutEvent
         {
-            DeviceNumber = DeviceIndex,
+            DeviceNumber = -1,
             Volume = Volume
         };
 

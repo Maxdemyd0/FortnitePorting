@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FortnitePorting.Framework;
 using FortnitePorting.Models.API.Responses;
+using FortnitePorting.Models.News;
 using FortnitePorting.Windows;
 
 namespace FortnitePorting.ViewModels;
@@ -14,7 +15,7 @@ public partial class NewsViewModel : ViewModelBase
     public override async Task OnViewOpened()
     {
         var newsResponse = await Api.FortnitePorting.News();
-        News = [..newsResponse.Entries];
+        News = [ReleaseNews.Version441, ..(newsResponse?.Entries ?? [])];
     }
     
     public void OpenNews(NewsEntry news)

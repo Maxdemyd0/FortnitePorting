@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using FortnitePorting.Controls.Navigation.Sidebar;
 using FortnitePorting.Framework;
 using FortnitePorting.Services;
+using FortnitePorting.Views;
 using AppWindowModel = FortnitePorting.WindowModels.AppWindowModel;
 
 namespace FortnitePorting.Windows;
@@ -27,14 +28,28 @@ public partial class AppWindow : WindowBase<AppWindowModel>
     private void OnSidebarItemSelected(object? sender, SidebarItemSelectedArgs args)
     {
         if (!AppSettings.Installation.FinishedSetup) return;
+
+        if (!WindowModel.SupaBase.IsLoggedIn && args.Tag is Type type &&
+            (type == typeof(ChatView) || type == typeof(LeaderboardView)))
+        {
+            App.RequireLogin();
+            return;
+        }
         
         Navigation.App.Open(args.Tag);
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        App.HideMainWindow(e);
+        base.OnClosing(e);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
 
-        App.Lifetime.Shutdown();
+        if (!App.IsShuttingDown)
+            App.Shutdown();
     }
 }

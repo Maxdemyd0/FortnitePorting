@@ -166,6 +166,23 @@ public class AssetItem : Base.BaseAssetItem
         await App.Clipboard.SetTextAsync(CreationData.Object.GetPathName());
     }
 
+    public override async Task SendToUser()
+    {
+        if (!SupaBase.IsLoggedIn)
+        {
+            App.RequireLogin();
+            return;
+        }
+
+        var gameFilePath = CreationData.Object.GetPathName();
+        var (icon, displayName, _) = await UEParse.ResolveGameFileAsync(gameFilePath);
+        await TaskService.RunDispatcherAsync(() =>
+        {
+            ChatVM.PendingGameFile = new PendingGameFileAttachment(gameFilePath, icon, displayName);
+            Navigation.App.Open<ChatView>();
+        });
+    }
+
     public override async Task PreviewProperties()
     {
         var assets = await UEParse.Provider!.LoadAllObjectsAsync(Exporter.FixPath(CreationData.Object.GetPathName()));
@@ -203,14 +220,4 @@ public class AssetItem : Base.BaseAssetItem
         }
     }
 
-    public override async Task SendToUser()
-    {
-        var path = CreationData.Object.GetPathName();
-        var (icon, displayName, _) = await UEParse.ResolveGameFileAsync(path);
-        TaskService.RunDispatcher(() =>
-        {
-            ChatVM.PendingGameFile = new PendingGameFileAttachment(path, icon, displayName);
-            Navigation.App.Open<ChatView>();
-        });
-    }
 }

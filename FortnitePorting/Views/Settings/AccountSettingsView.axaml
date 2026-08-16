@@ -30,6 +30,12 @@
                     <Button Content="Sign Out" Command="{Binding SupaBase.SignOut}"/>
                 </controls:SettingsItem.Footer>
             </controls:SettingsItem>
+
+            <controls:SettingsItem Title="Stay Logged In" Description="Keeps your Discord session after Fortnite Porting is closed.">
+                <controls:SettingsItem.Footer>
+                    <ToggleSwitch IsChecked="{Binding StayLoggedIn}"/>
+                </controls:SettingsItem.Footer>
+            </controls:SettingsItem>
             
             <controls:SettingsItem Title="Discord Rich Presence" Description="Displays Fortnite Porting runtime information in your discord profile.">
                 <controls:SettingsItem.Footer>

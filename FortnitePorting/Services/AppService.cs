@@ -7,6 +7,8 @@ using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
@@ -23,6 +25,7 @@ using FortnitePorting.Views;
 using FortnitePorting.Windows;
 using Microsoft.Win32;
 using RestSharp;
+using Serilog;
 
 namespace FortnitePorting.Services;
 
@@ -33,6 +36,9 @@ public class AppService : IService
     public IClipboard Clipboard => Lifetime.MainWindow!.Clipboard!;
 
     private readonly SemaphoreSlim _reloadSemaphore = new(1, 1);
+    private TrayIcon? _trayIcon;
+    private bool _isShuttingDown;
+    public bool IsShuttingDown => _isShuttingDown;
 
     public DirectoryInfo ApplicationDataFolder => AppSettings.Application.UseAppDataPath && Directory.Exists(AppSettings.Application.AppDataPath)
         ? new DirectoryInfo(AppSettings.Application.AppDataPath) 
@@ -43,6 +49,8 @@ public class AppService : IService
     public DirectoryInfo PluginsFolder => new(Path.Combine(App.ApplicationDataFolder.FullName, "Plugins"));
     
     private const string SCHEME_NAME = "fortniteporting";
+    private const string STARTUP_VALUE_NAME = "FortnitePorting";
+    public const string BACKGROUND_ARGUMENT = "--background";
     
     public void InitializeDesktop(IClassicDesktopStyleApplicationLifetime desktop)
     {
@@ -63,10 +71,91 @@ public class AppService : IService
         PluginsFolder.Create();
 
         RegisterUrlScheme();
+        UpdateStartupRegistration();
 
         Lifetime.Startup += OnAppStart;
         Lifetime.Exit += OnAppExit;
-        Lifetime.MainWindow = new AppWindow();
+        Lifetime.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        InitializeTrayIcon();
+    }
+
+    private void InitializeTrayIcon()
+    {
+        var menu = new NativeMenu();
+        var versionItem = new NativeMenuItem(Globals.VersionString) { IsEnabled = false };
+        var openItem = new NativeMenuItem("Open");
+        var exitItem = new NativeMenuItem("Exit");
+
+        openItem.Click += (_, _) => ShowMainWindow();
+        exitItem.Click += (_, _) => Shutdown();
+
+        menu.Add(versionItem);
+        menu.Add(new NativeMenuItemSeparator());
+        menu.Add(openItem);
+        menu.Add(new NativeMenuItemSeparator());
+        menu.Add(exitItem);
+
+        var iconStream = AssetLoader.Open(new Uri("avares://FortnitePorting/Assets/LogoRebrand.ico"));
+        _trayIcon = new TrayIcon
+        {
+            Icon = new WindowIcon(iconStream),
+            ToolTipText = "Fortnite Porting",
+            Menu = menu,
+            IsVisible = AppSettings.Application.MinimizeToTray
+        };
+        _trayIcon.Clicked += (_, _) => ShowMainWindow();
+
+        TrayIcon.SetIcons(Avalonia.Application.Current!, new TrayIcons { _trayIcon });
+    }
+
+    public void UpdateTrayIconVisibility()
+    {
+        if (_trayIcon is not null)
+            _trayIcon.IsVisible = AppSettings.Application.MinimizeToTray;
+    }
+
+    public void RequireLogin()
+    {
+        if (SupaBase.IsLoggedIn)
+            return;
+
+        Info.Dialog("Login Required", "Sign in with Discord to use Fortnite Porting's online features.", buttons:
+        [
+            new DialogButton
+            {
+                Text = "Sign In",
+                Action = () => TaskService.Run(async () => await SupaBase.SignIn())
+            },
+            new DialogButton { Text = "Not Now" }
+        ]);
+    }
+
+    public void ShowMainWindow()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var window = Lifetime.MainWindow ?? new AppWindow();
+            Lifetime.MainWindow ??= window;
+
+            window.Show();
+            if (window.WindowState == WindowState.Minimized)
+                window.WindowState = WindowState.Normal;
+
+            window.Activate();
+            window.BringToTop();
+
+            StartContentLoadingIfNeeded();
+        });
+    }
+
+    public void HideMainWindow(WindowClosingEventArgs e)
+    {
+        if (_isShuttingDown || !AppSettings.Application.MinimizeToTray)
+            return;
+
+        e.Cancel = true;
+        Lifetime.MainWindow?.Hide();
     }
     
     
@@ -139,6 +228,10 @@ public class AppService : IService
 
     private void OnAppStart(object? sender, ControlledApplicationLifetimeStartupEventArgs e)
     {
+        var isBackgroundLaunch = e.Args.Contains(BACKGROUND_ARGUMENT, StringComparer.OrdinalIgnoreCase);
+        if (!isBackgroundLaunch)
+            Lifetime.MainWindow = new AppWindow();
+
         if (AppSettings.Account.UseDiscordRichPresence)
             Discord.Initialize();
 
@@ -157,7 +250,16 @@ public class AppService : IService
         if (AppSettings.Installation.FinishedSetup)
         {
             Navigation.App.Open<HomeView>();
+
+            if (!isBackgroundLaunch || AppSettings.Application.LoadContentInBackground)
+                StartContentLoadingIfNeeded();
         }
+    }
+
+    private void StartContentLoadingIfNeeded()
+    {
+        if (AppSettings.Installation.FinishedSetup && !UEParse.IsLoading && !UEParse.FinishedLoading)
+            TaskService.Run(UEParse.LoadCoreSessionAsync);
     }
 
     private void OnAppExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
@@ -260,6 +362,26 @@ public class AppService : IService
 
     public void Shutdown()
     {
+        _isShuttingDown = true;
+        if (_trayIcon is not null)
+            _trayIcon.IsVisible = false;
+
         Lifetime.Shutdown();
+    }
+
+    public void UpdateStartupRegistration()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+            if (AppSettings.Application is { MinimizeToTray: true, LaunchOnStartup: true })
+                key.SetValue(STARTUP_VALUE_NAME, $"\"{Environment.ProcessPath}\" {BACKGROUND_ARGUMENT}");
+            else
+                key.DeleteValue(STARTUP_VALUE_NAME, false);
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Failed to register Fortnite Porting to launch at Windows startup");
+        }
     }
 }

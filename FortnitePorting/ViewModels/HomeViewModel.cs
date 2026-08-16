@@ -7,6 +7,7 @@ using FluentAvalonia.UI.Controls;
 using FortnitePorting.Framework;
 using FortnitePorting.Models.API.Responses;
 using FortnitePorting.Models.Information;
+using FortnitePorting.Models.News;
 using FortnitePorting.Services;
 using FortnitePorting.Shared.Extensions;
 using FortnitePorting.Windows;
@@ -35,14 +36,13 @@ public partial class HomeViewModel(
         TaskService.Run(async () =>
         {
             var newsResponse = await _api.FortnitePorting.News();
-            News = [..newsResponse.Entries.OrderByDescending(entry => entry.Date)];
+            News = [ReleaseNews.Version441, ..(newsResponse?.Entries ?? []).OrderByDescending(entry => entry.Date)];
 
             var featuredArtResponse = await _api.FortnitePorting.FeaturedArt();
             var featured = featuredArtResponse.Entries.ToList();
             featured.Shuffle();
             FeaturedArt = [..featured];
 
-            await _UEParse.LoadCoreSessionAsync();
         });
 
         if (!_settings.Application.DontAskAboutKofi &&

@@ -3,6 +3,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -15,6 +17,7 @@ namespace FortnitePorting;
 internal static class Program
 {
     private static Mutex _programMutex = null!;
+    private static bool _ownsProgramMutex;
     
     [STAThread]
     public static void Main(string[] args)
@@ -39,6 +42,7 @@ internal static class Program
 
             if (isNew)
             {
+                _ownsProgramMutex = true;
                 StartApp(args);
             }
             else
@@ -55,7 +59,9 @@ internal static class Program
         finally
         {
             Log.CloseAndFlush();
-            _programMutex.ReleaseMutex();
+            if (_ownsProgramMutex)
+                _programMutex.ReleaseMutex();
+            _programMutex?.Dispose();
         }
     }
 
@@ -65,15 +71,32 @@ internal static class Program
         {
             using var pipe = new NamedPipeServerStream("FortnitePorting");
 
-            var reader = new BinaryReader(pipe);
             while (true)
             {
-                pipe.WaitForConnection();
+                try
+                {
+                    pipe.WaitForConnection();
+                    using var reader = new BinaryReader(pipe, Encoding.UTF8, leaveOpen: true);
 
-                var url = reader.ReadString();
-                App.HandleUrlScheme(url);
-                
-                pipe.Disconnect();
+                    var argument = reader.ReadString();
+                    if (string.IsNullOrEmpty(argument))
+                        App.ShowMainWindow();
+                    else if (argument.Equals(AppService.BACKGROUND_ARGUMENT, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // A scheduled background launch should not pop open an already-running instance.
+                    }
+                    else
+                        App.HandleUrlScheme(argument);
+                }
+                catch (Exception e)
+                {
+                    Log.Warning(e, "Failed to process a request from a secondary Fortnite Porting instance");
+                }
+                finally
+                {
+                    if (pipe.IsConnected)
+                        pipe.Disconnect();
+                }
             }
         });
         
@@ -88,12 +111,11 @@ internal static class Program
             pipe.Connect(1000);
 
             var writer = new BinaryWriter(pipe);
-            writer.Write(args[0]);
+            writer.Write(args.FirstOrDefault() ?? string.Empty);
         }
         catch (Exception e)
         {
-            Log.Error(e.ToString());
-            StartApp(args);
+            Log.Warning(e, "Unable to contact the existing Fortnite Porting instance");
         }
     }
 

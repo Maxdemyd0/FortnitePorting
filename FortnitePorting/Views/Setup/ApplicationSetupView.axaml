@@ -59,10 +59,21 @@
                         <ComboBox ItemsSource="{ext:EnumToItemsSource {x:Type fortnitePorting:EThemeType}}"
                                   SelectedItem="{Binding Settings.Application.Theme, Converter={StaticResource EnumToRecord}}" >
                             <ComboBox.ItemTemplate>
-                                <DataTemplate DataType="ext:EnumRecord">
-                                    <controls1:IconText Text="{Binding Description}"
-                                                        Icon="{Binding Icon}" />
-                                </DataTemplate>
+                            <DataTemplate DataType="ext:EnumRecord">
+                                <StackPanel Orientation="Horizontal">
+                                    <Viewbox Width="20" Height="20" Stretch="Uniform"
+                                             Margin="{ext:Space 0, 0, 1, 0}"
+                                             IsVisible="{Binding HasVectorIcon}">
+                                        <Path Data="{Binding VectorIcon}" Fill="Transparent"
+                                              Stroke="{DynamicResource TextFillPrimaryBrush}" StrokeThickness="2"
+                                              StrokeLineCap="Round" StrokeJoin="Round" />
+                                    </Viewbox>
+                                    <avalonia:MaterialIcon Kind="{Binding Icon}" Width="20" Height="20"
+                                                           Margin="{ext:Space 0, 0, 1, 0}"
+                                                           IsVisible="{Binding !HasVectorIcon}" />
+                                    <TextBlock Text="{Binding Description}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </controls:SettingsItem.Footer>

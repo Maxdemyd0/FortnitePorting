@@ -29,6 +29,9 @@ public partial class AssetLoaderService : ObservableObject, IService, IResettabl
 {
     [ObservableProperty] private AssetLoader? _activeLoader;
     [ObservableProperty] private ReadOnlyObservableCollection<BaseAssetItem> _activeCollection = new([]);
+    [ObservableProperty] private bool _isPreloading;
+    [ObservableProperty] private string _preloadStatus = string.Empty;
+    [ObservableProperty] private float _preloadProgress;
     
     public List<AssetLoaderCategory> Categories { get; set; } =
     [
@@ -555,6 +558,49 @@ public partial class AssetLoaderService : ObservableObject, IService, IResettabl
         
         Set(type);
         await ActiveLoader.Load();
+    }
+
+    public async Task LoadAll()
+    {
+        var loaders = Categories.SelectMany(category => category.Loaders).ToArray();
+        if (loaders.Length == 0 || loaders.All(loader => loader.FinishedLoading))
+            return;
+
+        IsPreloading = true;
+        PreloadProgress = 0;
+
+        try
+        {
+            for (var index = 0; index < loaders.Length; index++)
+            {
+                var loader = loaders[index];
+                Set(loader.Type);
+                PreloadStatus = loader.LoadingStatus;
+
+                var loadTask = loader.Load();
+                while (!loadTask.IsCompleted)
+                {
+                    var assetProgress = loader.TotalAssets is > 0 and < int.MaxValue
+                        ? Math.Clamp(loader.LoadedAssets / (float) loader.TotalAssets, 0, 1)
+                        : 0;
+
+                    PreloadProgress = (index + assetProgress) / loaders.Length;
+                    await Task.WhenAny(loadTask, Task.Delay(100));
+                }
+
+                await loadTask;
+                PreloadProgress = (index + 1f) / loaders.Length;
+            }
+
+            Set(AppSettings.Application.UseDefaultExportLoadType
+                ? AppSettings.Application.DefaultExportLoadType
+                : EExportType.Outfit);
+            PreloadStatus = "Assets Ready";
+        }
+        finally
+        {
+            IsPreloading = false;
+        }
     }
 
     public AssetLoader Get(EExportType type)

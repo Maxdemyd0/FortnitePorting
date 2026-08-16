@@ -11,6 +11,7 @@ public sealed partial class AudioPlaybackSession : ObservableObject, IDisposable
     private WaveOutEvent _output;
     private WaveStream? _reader;
     private bool _disposed;
+    private bool _initialized;
 
     [ObservableProperty] private float _volume;
 
@@ -43,27 +44,61 @@ public sealed partial class AudioPlaybackSession : ObservableObject, IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
+        _initialized = false;
+
         _output.Stop();
+        _output.Dispose();
+
         _reader?.Dispose();
-        _reader = new WaveFileReader(stream);
-        _output.Init(_reader);
+        _reader = null;
+
+        try
+        {
+            _reader = new WaveFileReader(stream);
+
+            _output = _audio.CreateOutputDevice();
+            _output.Volume = Volume;
+            _output.Init(_reader);
+
+            _initialized = true;
+        }
+        catch
+        {
+            _reader?.Dispose();
+            _reader = null;
+
+            _output = _audio.CreateOutputDevice();
+            _output.Volume = Volume;
+
+            throw;
+        }
     }
 
     public void Play()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (!_initialized || _reader is null)
+            return;
+
         _output.Play();
     }
 
     public void Pause()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (!_initialized || _reader is null)
+            return;
+
         _output.Pause();
     }
 
     public void Stop()
     {
-        if (_disposed) return;
+        if (_disposed || !_initialized)
+            return;
+
         _output.Stop();
     }
 
@@ -73,6 +108,7 @@ public sealed partial class AudioPlaybackSession : ObservableObject, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _initialized = false;
 
         _audio.OutputDeviceChanged -= OnOutputDeviceChanged;
         _audio.VolumeChanged -= OnServiceVolumeChanged;
@@ -98,18 +134,26 @@ public sealed partial class AudioPlaybackSession : ObservableObject, IDisposable
     {
         if (_disposed) return;
 
-        var wasPlaying = _output.PlaybackState == PlaybackState.Playing;
+        var wasPlaying = _initialized &&
+                         _output.PlaybackState == PlaybackState.Playing;
+
         var position = CurrentTime;
 
-        _output.Stop();
+        if (_initialized)
+            _output.Stop();
+
+        _initialized = false;
+
         _output.Dispose();
         _output = _audio.CreateOutputDevice();
         _output.Volume = Volume;
 
-        if (_reader is null) return;
+        if (_reader is null)
+            return;
 
         _reader.CurrentTime = position;
         _output.Init(_reader);
+        _initialized = true;
 
         if (wasPlaying)
             _output.Play();

@@ -84,6 +84,9 @@ public partial class ChatService : ObservableObject, IService
 
     private readonly SemaphoreSlim _userGetLock = new(1, 1);
     private readonly SemaphoreSlim _messageFetchLock = new(1, 1);
+    private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
+    private IDisposable? _messageSubscription;
+    private bool _isInitialized;
 
     private const int PageSize = 20;
     [ObservableProperty] private bool _isLoadingMessages = false;
@@ -95,56 +98,98 @@ public partial class ChatService : ObservableObject, IService
 
     public async Task Initialize()
     {
-        _chatChannel = SupaBase.Client.Realtime.Channel("chat");
-
-        _messageCache.Connect()
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Sort(SortExpressionComparer<ChatMessage>.Ascending(item => item.Timestamp))
-            .Bind(out var messageCollection)
-            .Subscribe(_ =>
-            {
-                RebuildFeedItems();
-                OnPropertyChanged(nameof(IsEmpty));
-            });
-
-        Messages = messageCollection;
-
-        await InitializePresence();
-        await InitializeBroadcasts();
-
-        await _chatChannel.Subscribe();
-
-        Presence = new ChatUserPresence
+        await _lifecycleLock.WaitAsync();
+        try
         {
-            UserId = SupaBase.UserInfo!.UserId,
-            Application = Globals.ApplicationTag,
-            Version = Globals.VersionString
-        };
-
-        await ChatPresence.Track(Presence);
-
-        MessageReceived += (sender, message) =>
-        {
-            if (Navigation.App.IsTabOpen<ChatView>())
+            if (_isInitialized)
                 return;
-            
-            if (message.IsPing)
-                Info.Message($"Chat Message from {message.User.DisplayName}", ConvertIdsToMentions(message.Text), autoClose: false);
 
-            UnseenMessageCount++;
-        };
+            _chatChannel = SupaBase.Client.Realtime.Channel("chat");
 
-        Users.CollectionChanged += (sender, args) =>
+            _messageSubscription = _messageCache.Connect()
+                .ObserveOn(RxApp.MainThreadScheduler)
+                .Sort(SortExpressionComparer<ChatMessage>.Ascending(item => item.Timestamp))
+                .Bind(out var messageCollection)
+                .Subscribe(_ =>
+                {
+                    RebuildFeedItems();
+                    OnPropertyChanged(nameof(IsEmpty));
+                });
+
+            Messages = messageCollection;
+
+            await InitializePresence();
+            await InitializeBroadcasts();
+
+            await _chatChannel.Subscribe();
+
+            Presence = new ChatUserPresence
+            {
+                UserId = SupaBase.UserInfo!.UserId,
+                Application = Globals.ApplicationTag,
+                Version = Globals.VersionString
+            };
+
+            await ChatPresence.Track(Presence);
+
+            MessageReceived += (sender, message) =>
+            {
+                if (Navigation.App.IsTabOpen<ChatView>())
+                    return;
+
+                if (message.IsPing)
+                    Info.Message($"Chat Message from {message.User.DisplayName}", ConvertIdsToMentions(message.Text), autoClose: false);
+
+                UnseenMessageCount++;
+            };
+
+            Users.CollectionChanged += OnUsersCollectionChanged;
+            TypingUsers.CollectionChanged += OnTypingUsersCollectionChanged;
+
+            _isInitialized = true;
+        }
+        finally
         {
-            OnPropertyChanged(nameof(UserMentionNames));
-            OnPropertyChanged(nameof(UsersByGroup));
-        };
+            _lifecycleLock.Release();
+        }
     }
 
     public async Task Uninitialize()
     {
-        await ChatPresence.Untrack();
-        _chatChannel.Unsubscribe();
+        await _lifecycleLock.WaitAsync();
+        try
+        {
+            Users.CollectionChanged -= OnUsersCollectionChanged;
+            TypingUsers.CollectionChanged -= OnTypingUsersCollectionChanged;
+
+            if (ChatPresence is not null)
+                await ChatPresence.Untrack();
+            _chatChannel?.Unsubscribe();
+
+            _messageSubscription?.Dispose();
+            _messageSubscription = null;
+            _chatChannel = null!;
+            ChatPresence = null!;
+            _chatBroadcast = null!;
+            Presence = null!;
+            _isInitialized = false;
+
+            MessageReceived = null;
+            _messageCache.Clear();
+            FeedItems.Clear();
+            Users.Clear();
+            UserCache.Clear();
+            TypingUsers.Clear();
+            UnseenMessageCount = 0;
+            HasFetchedMessages = false;
+            HasMoreMessages = true;
+            _oldestFetchedTimestamp = null;
+            _separatorCache.Clear();
+        }
+        finally
+        {
+            _lifecycleLock.Release();
+        }
     }
 
     public async Task<bool> LoadMoreMessages()
@@ -230,7 +275,6 @@ public partial class ChatService : ObservableObject, IService
 
         ChatPresence = _chatChannel.Register<ChatUserPresence>(SupaBase.UserInfo.UserId);
 
-        TypingUsers.CollectionChanged += (sender, args) => OnPropertyChanged(nameof(TypingUsersText));
         ChatPresence.AddPresenceEventHandler(IRealtimePresence.EventType.Sync, (sender, type) =>
         {
             if (!SupaBase.IsLoggedIn) return;
@@ -251,7 +295,12 @@ public partial class ChatService : ObservableObject, IService
                 }
 
 
-                TypingUsers = [..newTypingUsers];
+                await TaskService.RunDispatcherAsync(() =>
+                {
+                    TypingUsers.Clear();
+                    foreach (var user in newTypingUsers)
+                        TypingUsers.Add(user);
+                });
             });
         });
 
@@ -309,6 +358,15 @@ public partial class ChatService : ObservableObject, IService
                 OnPropertyChanged(nameof(UsersByGroup));
         });
     }
+
+    private void OnUsersCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args)
+    {
+        OnPropertyChanged(nameof(UserMentionNames));
+        OnPropertyChanged(nameof(UsersByGroup));
+    }
+
+    private void OnTypingUsersCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs args)
+        => OnPropertyChanged(nameof(TypingUsersText));
 
     private async Task InitializeBroadcasts()
     {

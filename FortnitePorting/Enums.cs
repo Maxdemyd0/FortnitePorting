@@ -112,6 +112,14 @@ public enum EThemeType
     [Description("Ocean")]
     [Icon(MaterialIconKind.WaterDrop)]
     OceanBlue,
+
+    [Description("Emerald")]
+    [Icon(MaterialIconKind.Leaf)]
+    Emerald,
+
+    [Description("Sunset")]
+    [Icon(MaterialIconKind.WeatherSunset)]
+    Sunset,
     
     [Description("Dark")]
     [Icon(MaterialIconKind.WeatherNight)]

@@ -63,6 +63,10 @@ public partial class ApplicationSettingsViewModel : SettingsViewModelBase
     [ObservableProperty] private bool _dontAskAboutKofi;
     [ObservableProperty] private DateTime _nextKofiAskDate = DateTime.Today;
     [ObservableProperty] private bool _showAssetNames;
+
+    [ObservableProperty] private bool _minimizeToTray = true;
+    [ObservableProperty] private bool _launchOnStartup = true;
+    [ObservableProperty] private bool _loadContentInBackground = true;
     
     [ObservableProperty] private bool _useDefaultExportLoadType = false;
     [ObservableProperty] private EExportType _defaultExportLoadType = EExportType.Outfit;
@@ -75,7 +79,7 @@ public partial class ApplicationSettingsViewModel : SettingsViewModelBase
     public ObservableCollection<WindowTransparencyLevel> TransparencyHints => Theme is EThemeType.Mica ? [WindowTransparencyLevel.Mica, WindowTransparencyLevel.AcrylicBlur] : [WindowTransparencyLevel.AcrylicBlur];
     
     public string AssetPath => UseAssetsPath && Directory.Exists(AssetsPath) ? AssetsPath : App.AssetsFolder.FullName;
-    
+
     [JsonIgnore]
     public DirectSoundDeviceInfo[] AudioDevices => Audio.Devices;
 
@@ -105,15 +109,31 @@ public partial class ApplicationSettingsViewModel : SettingsViewModelBase
 
         Audio.NotifyVolumeChanged();
     }
+
+    partial void OnMinimizeToTrayChanged(bool value)
+    {
+        if (!ReferenceEquals(this, AppSettings.Application)) return;
+
+        App.UpdateStartupRegistration();
+        App.UpdateTrayIconVisibility();
+    }
+
+    partial void OnLaunchOnStartupChanged(bool value)
+    {
+        if (ReferenceEquals(this, AppSettings.Application))
+            App.UpdateStartupRegistration();
+    }
     
     partial void OnThemeChanged(EThemeType value)
     {
         if (Avalonia.Application.Current is not { } app) return;
 
-        app.Styles.RemoveAll(style => style is FPStyles);
-
         var themeUri = new Uri($"avares://FortnitePorting/Assets/Themes/{value.ToString()}Theme.axaml");
-        if (AvaloniaXamlLoader.Load(themeUri) is FPStyles newTheme)
-            app.Styles.Add(newTheme);
+        if (AvaloniaXamlLoader.Load(themeUri) is not FPStyles newTheme) return;
+
+        // Keep a complete resource set available while swapping styles. Removing the
+        // active theme first briefly invalidated DynamicResource lookups in the title.
+        app.Styles.Add(newTheme);
+        app.Styles.RemoveAll(style => style is FPStyles && !ReferenceEquals(style, newTheme));
     }
 }

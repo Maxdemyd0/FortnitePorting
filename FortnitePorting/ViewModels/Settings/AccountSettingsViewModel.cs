@@ -13,6 +13,8 @@ public partial class AccountSettingsViewModel : SettingsViewModelBase
 
    [ObservableProperty] private string? _sessionInfoEncrypted = null;
 
+   [ObservableProperty] private bool _stayLoggedIn = true;
+
    [ObservableProperty] private bool _useDiscordRichPresence = true;
 
    partial void OnUseDiscordRichPresenceChanged(bool value)
@@ -21,5 +23,13 @@ public partial class AccountSettingsViewModel : SettingsViewModelBase
          Discord.Initialize();
       else
          Discord.Deinitialize();
+   }
+
+   partial void OnStayLoggedInChanged(bool value)
+   {
+      if (value)
+         SupaBase.UpdatePersistedSession();
+      else
+         SessionInfoEncrypted = null;
    }
 }

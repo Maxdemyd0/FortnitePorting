@@ -112,10 +112,11 @@ public partial class InfoService : ObservableObject, IService, ILogEventSink
             Messages.RemoveAll(info => info.Id == id);
     }
     
-    public void Dialog(string title, string? message = null, object? content = null, DialogButton[]? buttons = null, bool canClose = true)
+    public void Dialog(string title, string? message = null, object? content = null, DialogButton[]? buttons = null, bool canClose = true, string? id = null)
     {
         DialogQueue.Enqueue(new DialogData
         {
+            Id = id,
             Title = title,
             Message = message,
             Content = content,
@@ -123,6 +124,8 @@ public partial class InfoService : ObservableObject, IService, ILogEventSink
             CanClose = canClose
         });
     }
+
+    public void CloseDialog(string id) => DialogQueue.CloseIfCurrent(id);
     
     public void Broadcast(BroadcastResponseEntry broadcastResponse)
     {

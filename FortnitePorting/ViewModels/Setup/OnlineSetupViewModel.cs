@@ -16,7 +16,7 @@ public partial class OnlineSetupViewModel : ViewModelBase
     [RelayCommand]
     public async Task SignIn()
     {
-        await SupaBase.SignIn();
-        Navigation.Setup.Open<FinishedSetupView>();
+        if (await SupaBase.SignIn())
+            Navigation.Setup.Open<FinishedSetupView>();
     }
 }

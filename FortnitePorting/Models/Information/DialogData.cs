@@ -8,6 +8,7 @@ namespace FortnitePorting.Models.Information;
 
 public partial class DialogData : ObservableObject
 {
+    [ObservableProperty] private string? _id;
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private string _title;
     [ObservableProperty] private string? _message;

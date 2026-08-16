@@ -71,6 +71,9 @@ public partial class AssetLoader : ObservableObject
         FinishedLoading = false;
         LoadedAssets = 0;
         TotalAssets = int.MaxValue;
+        LoadedIcons = 0;
+        TotalIcons = 0;
+        IsLoadingIcons = false;
         
         foreach (var item in Source.Items)
         {
@@ -89,12 +92,17 @@ public partial class AssetLoader : ObservableObject
     
     [ObservableProperty] private ObservableCollection<BaseAssetInfo> _selectedAssetInfos = [];
     
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingPercentageText))] private int _loadedAssets;
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingPercentageText))] private int _totalAssets = int.MaxValue;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingPercentageText), nameof(ProgressCurrent))] private int _loadedAssets;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingPercentageText), nameof(ProgressTotal))] private int _totalAssets = int.MaxValue;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingPercentageText), nameof(ProgressCurrent))] private int _loadedIcons;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingPercentageText), nameof(ProgressTotal))] private int _totalIcons;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(LoadingStatus), nameof(LoadingPercentageText), nameof(ProgressCurrent), nameof(ProgressTotal))] private bool _isLoadingIcons;
     [ObservableProperty] private bool _finishedLoading = false;
     
-    public string LoadingStatus => $"Loading {Type.Description}";
-    public string LoadingPercentageText => $"{(LoadedAssets == 0 && TotalAssets == 0 ? 0 : LoadedAssets * 100f / TotalAssets):N0}%";
+    public string LoadingStatus => IsLoadingIcons ? $"Loading {Type.Description} Icons" : $"Loading {Type.Description}";
+    public int ProgressCurrent => IsLoadingIcons ? LoadedIcons : LoadedAssets;
+    public int ProgressTotal => IsLoadingIcons ? TotalIcons : TotalAssets;
+    public string LoadingPercentageText => $"{(ProgressCurrent == 0 && ProgressTotal == 0 ? 0 : ProgressCurrent * 100f / ProgressTotal):N0}%";
     
     
     public readonly IObservable<SortExpressionComparer<BaseAssetItem>> AssetSort;
@@ -319,9 +327,42 @@ public partial class AssetLoader : ObservableObject
         Source.AddOrUpdate(AssetBag);
         AssetBag.Clear();
         LoadedAssets = TotalAssets;
-        FinishedLoading = true;
-
         AssetDatas.Clear();
+
+        await LoadIconsAsync(token);
+        if (token.IsCancellationRequested) return;
+
+        FinishedLoading = true;
+    }
+
+    private async Task LoadIconsAsync(CancellationToken token)
+    {
+        var items = Source.Items.OfType<AssetItem>().ToArray();
+        TotalIcons = items.Length;
+        LoadedIcons = 0;
+        IsLoadingIcons = true;
+
+        try
+        {
+            await Parallel.ForEachAsync(items, new ParallelOptions
+                {
+                    CancellationToken = token,
+                    MaxDegreeOfParallelism = Math.Min(2, Environment.ProcessorCount / 2)
+                },
+                async (item, _) =>
+                {
+                    await WaitIfPausedAsync();
+                    if (item.IconDisplayImage is null)
+                        await item.LoadBitmapAsync();
+
+                    Interlocked.Increment(ref _loadedIcons);
+                    OnPropertyChanged(nameof(LoadedIcons));
+                });
+        }
+        finally
+        {
+            IsLoadingIcons = false;
+        }
     }
 
     private async Task LoadAsset(FPartialAssetData data)

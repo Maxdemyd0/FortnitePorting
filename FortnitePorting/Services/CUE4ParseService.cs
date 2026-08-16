@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -59,6 +60,7 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
     [ObservableProperty] private float _progress = 0.0f;
     [ObservableProperty] private bool _isLoading;
     public HybridFileProvider? Provider;
+    private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
 
     public FBuildPatchAppManifest? LiveManifest;
     
@@ -142,7 +144,7 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
             UpdateStatus(stage.Attr.Name);
             
             completedWeight += stage.Attr.Weight;
-            Progress = (completedWeight / totalWeight) * 100.0f;
+            Progress = (completedWeight / totalWeight) * 80.0f;
             
             if (stage.Method.Invoke(this, null) is not Task stageTask)
                 continue;
@@ -151,8 +153,6 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
         }
 
         UpdateStatus(string.Empty);
-        FinishedLoading = true;
-        Progress = 0;
     }
 
     public void Reset()
@@ -177,17 +177,70 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
 
     public async Task LoadCoreSessionAsync()
     {
-        IsLoading = true;
-        await Initialize();
-        IsLoading = false;
+        if (FinishedLoading)
+            return;
 
-        if (!FinishedLoading) return;
+        if (AppSettings.Installation.CurrentProfile is null)
+        {
+            Info.Message("Installation Profile", "No installation profile is selected. Select one in Installation Settings before loading content.");
+            return;
+        }
 
-        if (AppSettings.Application.UseDefaultExportLoadType)
-            await AssetLoading.Load(AppSettings.Application.DefaultExportLoadType);
+        await _loadSemaphore.WaitAsync();
+        try
+        {
+            if (FinishedLoading)
+                return;
 
-        await Files.Initialize();
-        await FilesVM.Initialize();
+            IsLoading = true;
+            await Initialize();
+
+            if (Provider is null)
+                return;
+
+            var assetLoadTask = AssetLoading.LoadAll();
+            await TrackProgressAsync(assetLoadTask, "Loading Assets", 80, 95,
+                () => (int) (AssetLoading.PreloadProgress * 1000),
+                () => 1000,
+                () => AssetLoading.PreloadStatus);
+
+            var fileLoadTask = Files.Initialize();
+            await TrackProgressAsync(fileLoadTask, "Indexing Files", 95, 100,
+                () => Files.LoadedFiles,
+                () => Files.TotalFiles);
+
+            await FilesVM.Initialize();
+
+            Progress = 100;
+            UpdateStatus("Ready");
+            FinishedLoading = true;
+        }
+        finally
+        {
+            IsLoading = false;
+            _loadSemaphore.Release();
+        }
+    }
+
+    private async Task TrackProgressAsync(Task task, string status, float start, float end,
+        Func<int> getCurrent, Func<int> getTotal, Func<string>? getStatus = null)
+    {
+        UpdateStatus(status);
+
+        while (!task.IsCompleted)
+        {
+            if (getStatus?.Invoke() is { Length: > 0 } currentStatus)
+                UpdateStatus(currentStatus);
+
+            var total = getTotal();
+            if (total > 0 && total < int.MaxValue)
+                Progress = start + Math.Clamp(getCurrent() / (float) total, 0, 1) * (end - start);
+
+            await Task.WhenAny(task, Task.Delay(100));
+        }
+
+        await task;
+        Progress = end;
     }
 
     public void UpdateStatus(string status)

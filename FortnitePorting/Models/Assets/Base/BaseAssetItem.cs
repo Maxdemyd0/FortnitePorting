@@ -90,6 +90,12 @@ public abstract partial class BaseAssetItem : ObservableObject
     [RelayCommand]
     public virtual async Task SendToUser()
     {
+        if (!SupaBase.IsLoggedIn)
+        {
+            App.RequireLogin();
+            return;
+        }
+
         Info.Message("Unsupported Asset", "Cannot send this type of asset to others.");
     }
     

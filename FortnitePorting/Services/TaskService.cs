@@ -71,7 +71,7 @@ public static class TaskService
 
     public static void RunDispatcher(Func<Task> function, DispatcherPriority priority = default)
     {
-        Dispatcher.UIThread.Invoke(async () =>
+        Dispatcher.UIThread.Post(async () =>
         {
             try
             {
@@ -86,17 +86,22 @@ public static class TaskService
 
     public static async Task RunDispatcherAsync(Func<Task> function, DispatcherPriority priority = default)
     {
-        await Dispatcher.UIThread.InvokeAsync(async () =>
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatcher.UIThread.Post(async () =>
         {
             try
             {
                 await function();
+                completion.TrySetResult();
             }
             catch (Exception e)
             {
                 Exception?.Invoke(e);
+                completion.TrySetResult();
             }
         }, priority);
+
+        await completion.Task;
     }
 
     public static void RunDispatcher(Action function, DispatcherPriority priority = default)
