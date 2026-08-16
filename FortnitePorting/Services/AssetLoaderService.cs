@@ -592,9 +592,7 @@ public partial class AssetLoaderService : ObservableObject, IService, IResettabl
                 PreloadProgress = (index + 1f) / loaders.Length;
             }
 
-            Set(AppSettings.Application.UseDefaultExportLoadType
-                ? AppSettings.Application.DefaultExportLoadType
-                : EExportType.Outfit);
+            Set(GetPreferredAssetType());
             PreloadStatus = "Assets Ready";
         }
         finally
@@ -610,6 +608,17 @@ public partial class AssetLoaderService : ObservableObject, IService, IResettabl
         
         return Categories.SelectMany(cat => cat.Loaders).FirstOrDefault(loader => loader.Type == type) 
                ?? throw new ArgumentOutOfRangeException(nameof(type), $"Asset type {type.Description} does not have an implemented loader.");
+    }
+
+    public EExportType GetPreferredAssetType()
+    {
+        var requestedType = AppSettings.Application.UseDefaultExportLoadType
+            ? AppSettings.Application.DefaultExportLoadType
+            : AppSettings.Application.LastAssetType;
+
+        return Categories.SelectMany(category => category.Loaders).Any(loader => loader.Type == requestedType)
+            ? requestedType
+            : EExportType.Outfit;
     }
     
     public void Set(EExportType type)

@@ -80,4 +80,28 @@ public static class ReleaseNews
                       • Background UI dispatch and missing installation-profile handling have been hardened against avoidable crashes.
                       """
     };
+
+    public static NewsEntry Version422Fpvu => new()
+    {
+        Title = "Fortnite Porting 4.4.2-fpvu",
+        SubTitle = "Recoverable loading, smoother asset navigation, and a remembered workspace.",
+        Tag = "v4.4.2-fpvu",
+        Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
+        Date = new DateTime(2026, 8, 16),
+        Description = """
+                      Fortnite Porting 4.4.2-fpvu
+                      ============================
+
+                      Loading recovery
+                      ----------------
+                      • Content-loading failures now explain what went wrong and provide a Retry action on Home.
+                      • Retrying resets partial loading state and runs the standard installation-loading process again.
+
+                      Asset workflow
+                      --------------
+                      • Asset tab switching no longer waits on the UI thread while background loaders pause and resume.
+                      • When a default asset type is disabled, Assets reopens on the last tab you used.
+                      • An enabled Default Asset Type continues to take priority over the remembered tab.
+                      """
+    };
 }

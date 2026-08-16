@@ -60,9 +60,12 @@ public partial class AssetLoader : ObservableObject
 
     private bool BeganLoading;
     private CancellationTokenSource _loadCts = new();
+    private readonly object _pauseLock = new();
+    private TaskCompletionSource<bool>? _resumeCompletion;
 
     public void Reset()
     {
+        Unpause();
         _loadCts.Cancel();
         _loadCts.Dispose();
         _loadCts = new CancellationTokenSource();
@@ -115,8 +118,6 @@ public partial class AssetLoader : ObservableObject
     public readonly IObservable<Func<BaseAssetItem, bool>> AssetFilter;
     [ObservableProperty] private string _searchFilter = string.Empty;
     [ObservableProperty] private bool _useRegex = false;
-    
-    private readonly SemaphoreSlim _pauseSemaphore = new(1, 1);
     
     private readonly Subject<Unit> _filterRefresh = new();
     
@@ -474,29 +475,44 @@ public partial class AssetLoader : ObservableObject
     
     private async Task WaitIfPausedAsync()
     {
-        if (IsPaused)
+        Task? resumeTask = null;
+        lock (_pauseLock)
         {
-            await _pauseSemaphore.WaitAsync();
-            _pauseSemaphore.Release();
+            if (IsPaused)
+            {
+                _resumeCompletion ??= new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                resumeTask = _resumeCompletion.Task;
+            }
         }
+
+        if (resumeTask is not null)
+            await resumeTask;
     }
 
     public void Pause()
     {
-        if (!IsPaused)
+        lock (_pauseLock)
         {
-            _pauseSemaphore.Wait(); // Acquire the semaphore
+            if (IsPaused) return;
+
             IsPaused = true;
+            _resumeCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 
     public void Unpause()
     {
-        if (IsPaused)
+        TaskCompletionSource<bool>? resumeCompletion;
+        lock (_pauseLock)
         {
+            if (!IsPaused) return;
+
             IsPaused = false;
-            _pauseSemaphore.Release(); // Release waiting tasks
+            resumeCompletion = _resumeCompletion;
+            _resumeCompletion = null;
         }
+
+        resumeCompletion?.TrySetResult(true);
     }
     
     private static Func<BaseAssetItem, bool> CreateAssetFilter((string, ObservableCollection<FilterItem>, bool, EAssetSortType) values)

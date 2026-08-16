@@ -25,7 +25,7 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="{ext:Space 1.5}" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -39,10 +39,16 @@
             <TextBlock Grid.Row="1" Text="{Binding UEParse.Status}" 
                        VerticalAlignment="Center" HorizontalAlignment="Center" Margin="{ext:Space 0, 1}"
                        FontSize="14" FontFamily="{StaticResource SFTextMedium}" Classes="TextFillColorSecondaryBrush"
-                       IsVisible="{Binding !UEParse.FinishedLoading}"/>
+                       IsVisible="{Binding UEParse.IsLoadProgressVisible}"/>
+
+            <TextBlock Grid.Row="1" Text="{Binding UEParse.LoadError}"
+                       VerticalAlignment="Center" HorizontalAlignment="Center" Margin="{ext:Space 0, 1}"
+                       FontSize="14" FontFamily="{StaticResource SFTextMedium}" Classes="TextFillColorSecondaryBrush"
+                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520"
+                       IsVisible="{Binding UEParse.HasLoadError}"/>
             
             <ProgressBar Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Height="8"
-                         IsVisible="{Binding !UEParse.FinishedLoading}"
+                         IsVisible="{Binding UEParse.IsLoadProgressVisible}"
                          Margin="{ext:Space 0, 1, 0, 0}"
                          MinWidth="500"
                          Value="{Binding UEParse.Progress}"
@@ -54,6 +60,10 @@
                     </Transitions>
                 </ProgressBar.Transitions>
             </ProgressBar>
+
+            <Button Grid.Row="3" Content="Retry" Command="{Binding RetryContentLoadingCommand}"
+                    HorizontalAlignment="Center" Margin="{ext:Space 0, 1, 0, 0}"
+                    IsVisible="{Binding UEParse.HasLoadError}"/>
 
             <StackPanel Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal">
                 <StackPanel.Styles>

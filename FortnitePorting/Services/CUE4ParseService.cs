@@ -56,9 +56,12 @@ namespace FortnitePorting.Services;
 public partial class CUE4ParseService : ObservableObject, IService, IResettable
 {
     [ObservableProperty] private string _status = "Loading Files";
-    [ObservableProperty] private bool _finishedLoading;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsLoadProgressVisible))] private bool _finishedLoading;
     [ObservableProperty] private float _progress = 0.0f;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsLoadProgressVisible))] private bool _hasLoadError;
+    [ObservableProperty] private string _loadError = string.Empty;
+    public bool IsLoadProgressVisible => !FinishedLoading && !HasLoadError;
     public HybridFileProvider? Provider;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
 
@@ -158,6 +161,8 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
     public void Reset()
     {
         FinishedLoading = false;
+        HasLoadError = false;
+        LoadError = string.Empty;
         Progress = 0;
         Status = "Loading Files";
 
@@ -182,7 +187,7 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
 
         if (AppSettings.Installation.CurrentProfile is null)
         {
-            Info.Message("Installation Profile", "No installation profile is selected. Select one in Installation Settings before loading content.");
+            SetLoadError("No installation profile is selected. Choose one in Installation Settings, then retry.");
             return;
         }
 
@@ -193,10 +198,15 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
                 return;
 
             IsLoading = true;
+            HasLoadError = false;
+            LoadError = string.Empty;
             await Initialize();
 
             if (Provider is null)
+            {
+                SetLoadError("The selected installation could not be loaded. Check Installation Settings, then retry.");
                 return;
+            }
 
             var assetLoadTask = AssetLoading.LoadAll();
             await TrackProgressAsync(assetLoadTask, "Loading Assets", 80, 95,
@@ -215,11 +225,23 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
             UpdateStatus("Ready");
             FinishedLoading = true;
         }
+        catch (Exception e)
+        {
+            Log.Error(e, "Failed to load Fortnite content");
+            SetLoadError("Content loading failed. Check your installation settings and retry.");
+        }
         finally
         {
             IsLoading = false;
             _loadSemaphore.Release();
         }
+    }
+
+    private void SetLoadError(string message)
+    {
+        HasLoadError = true;
+        LoadError = message;
+        UpdateStatus("Content loading needs attention");
     }
 
     private async Task TrackProgressAsync(Task task, string status, float start, float end,

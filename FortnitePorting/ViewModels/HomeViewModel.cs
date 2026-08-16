@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using FluentAvalonia.UI.Controls;
 using FortnitePorting.Framework;
 using FortnitePorting.Models.API.Responses;
@@ -36,7 +37,7 @@ public partial class HomeViewModel(
         TaskService.Run(async () =>
         {
             var newsResponse = await _api.FortnitePorting.News();
-            News = [ReleaseNews.VersionFpvu, ReleaseNews.Version440, ..(newsResponse?.Entries ?? []).OrderByDescending(entry => entry.Date)];
+            News = [ReleaseNews.Version422Fpvu, ReleaseNews.VersionFpvu, ReleaseNews.Version440, ..(newsResponse?.Entries ?? []).OrderByDescending(entry => entry.Date)];
 
             var featuredArtResponse = await _api.FortnitePorting.FeaturedArt();
             var featured = featuredArtResponse.Entries.ToList();
@@ -75,6 +76,14 @@ public partial class HomeViewModel(
     public void OpenNews(NewsEntry news)
     {
         ChangelogWindow.Preview(news.Description);
+    }
+
+    [RelayCommand]
+    private async Task RetryContentLoading()
+    {
+        if (UEParse.IsLoading) return;
+
+        await _app.ReloadInstallationAsync();
     }
 
     public void OpenFeaturedArt(FeaturedArtEntry featured)

@@ -105,9 +105,7 @@ public partial class AssetsViewModel(
             }
         });
 
-        _navigation.Assets.Open(_settings.Application.UseDefaultExportLoadType
-            ? _settings.Application.DefaultExportLoadType
-            : EExportType.Outfit);
+        _navigation.Assets.Open(_assetLoader.GetPreferredAssetType());
     }
 
     public override async Task OnViewOpened()
@@ -243,6 +241,8 @@ public partial class AssetsViewModel(
     public void ChangeTab(EExportType assetType)
     {
         if (_assetLoader.ActiveLoader?.Type == assetType) return;
+
+        _settings.Application.LastAssetType = assetType;
 
         _discord.Update(assetType);
 

@@ -70,6 +70,7 @@ public partial class ApplicationSettingsViewModel : SettingsViewModelBase
     
     [ObservableProperty] private bool _useDefaultExportLoadType = false;
     [ObservableProperty] private EExportType _defaultExportLoadType = EExportType.Outfit;
+    [ObservableProperty] private EExportType _lastAssetType = EExportType.Outfit;
     [ObservableProperty] private EExportLocation _defaultExportLocation = EExportLocation.Blender;
     [ObservableProperty] private EpicAuthResponse? _epicAuth;
     
