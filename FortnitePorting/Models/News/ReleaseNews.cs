@@ -50,16 +50,16 @@ public static class ReleaseNews
                       """
     };
 
-    public static NewsEntry Version441 => new()
+    public static NewsEntry VersionFpvu => new()
     {
-        Title = "Fortnite Porting 4.4.1",
+        Title = "Fortnite Porting 4.4.0-fpvu",
         SubTitle = "A polish update for online sign-in, Chat, theme selection, and app reliability.",
-        Tag = "v4.4.1",
+        Tag = "v4.4.0-fpvu",
         Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
         Date = new DateTime(2026, 8, 16),
         Description = """
-                      Fortnite Porting 4.4.1
-                      =====================
+                      Fortnite Porting 4.4.0-fpvu
+                      ============================
 
                       This follow-up improves the online experience and fixes edge cases found after the 4.4.0 release.
 
