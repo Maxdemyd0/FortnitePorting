@@ -5,15 +5,15 @@ namespace FortnitePorting.Models.News;
 
 public static class ReleaseNews
 {
-    public static NewsEntry Version441 => new()
+    public static NewsEntry Version440 => new()
     {
-        Title = "Fortnite Porting 4.4.1",
+        Title = "Fortnite Porting 4.4.0",
         SubTitle = "Tray-first startup, background content preparation, online improvements, new themes, and a smoother asset experience.",
-        Tag = "v4.4.1",
+        Tag = "v4.4.0",
         Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
         Date = new DateTime(2026, 8, 15),
         Description = """
-                      Fortnite Porting 4.4.1
+                      Fortnite Porting 4.4.0
                       =====================
 
                       This update focuses on getting Fortnite Porting ready before you need it, while making the app more comfortable to leave running throughout the day.
@@ -42,27 +42,42 @@ public static class ReleaseNews
                       ----------
                       • Added Emerald and Sunset themes, each with its own background, accent, two-tone Fortnite Porting logo, and picker icon.
                       • Theme changes retain live resources while switching, so title and logo colors update correctly.
-                      • Emerald and Sunset remain correctly selected in the collapsed theme picker.
-
-                      Online and chat
-                      ---------------
-                      • Chat and Leaderboard now explain that login is required instead of appearing unavailable.
-                      • Send in Chat is available from assets for signed-in users; signed-out users receive the same login prompt.
-                      • Chat sessions cleanly reconnect after signing out and back in.
-                      • Discord sign-in now has a Close option, times out after two minutes, and closes automatically after authentication completes.
-                      • Added a Stay Logged In option, enabled by default, to restore your Discord session after restarting Fortnite Porting.
-                      • Chat now includes a Powered by Discord footer.
-
-                      Reliability
-                      -----------
-                      • Secondary launches safely activate the existing app instance, and the activation listener recovers from interrupted requests.
-                      • Online subscriptions are cleaned up on sign-out to prevent duplicate updates after re-login.
-                      • Background UI dispatch and missing installation-profile handling have been hardened against avoidable crashes.
 
                       Audio
                       -----
                       • Audio playback recreates its output safely when loading audio or changing output devices, preventing operations on an uninitialized player.
                       • Playback now uses the Windows default output device.
+                      """
+    };
+
+    public static NewsEntry Version441 => new()
+    {
+        Title = "Fortnite Porting 4.4.1",
+        SubTitle = "A polish update for online sign-in, Chat, theme selection, and app reliability.",
+        Tag = "v4.4.1",
+        Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
+        Date = new DateTime(2026, 8, 16),
+        Description = """
+                      Fortnite Porting 4.4.1
+                      =====================
+
+                      This follow-up improves the online experience and fixes edge cases found after the 4.4.0 release.
+
+                      Account and Chat
+                      ----------------
+                      • Chat and Leaderboard now explain that login is required instead of appearing unavailable.
+                      • Send in Chat is available from assets for signed-in users; signed-out users receive the same login prompt.
+                      • Chat sessions cleanly reconnect after signing out and back in.
+                      • Discord sign-in has a Close option, times out after two minutes, and closes automatically after authentication completes.
+                      • Added a Stay Logged In option, enabled by default, to restore your Discord session after restarting Fortnite Porting.
+                      • Chat now includes a Powered by Discord footer.
+
+                      Polish and reliability
+                      ----------------------
+                      • Emerald and Sunset remain correctly selected in the collapsed theme picker.
+                      • Secondary launches safely activate the existing app instance, and the activation listener recovers from interrupted requests.
+                      • Online subscriptions are cleaned up on sign-out to prevent duplicate updates after re-login.
+                      • Background UI dispatch and missing installation-profile handling have been hardened against avoidable crashes.
                       """
     };
 }
