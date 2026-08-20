@@ -15,7 +15,7 @@ public partial class NewsViewModel : ViewModelBase
     public override async Task OnViewOpened()
     {
         var newsResponse = await Api.FortnitePorting.News();
-        News = [ReleaseNews.Version422Fpvu, ReleaseNews.VersionFpvu, ReleaseNews.Version440, ..(newsResponse?.Entries ?? [])];
+        News = [ReleaseNews.Version422Fpvu, ReleaseNews.Version441Fpvu, ReleaseNews.Version440Fpvu, ..(newsResponse?.Entries ?? [])];
     }
     
     public void OpenNews(NewsEntry news)

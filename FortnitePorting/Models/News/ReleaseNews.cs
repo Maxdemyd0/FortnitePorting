@@ -5,16 +5,16 @@ namespace FortnitePorting.Models.News;
 
 public static class ReleaseNews
 {
-    public static NewsEntry Version440 => new()
+    public static NewsEntry Version440Fpvu => new()
     {
-        Title = "Fortnite Porting 4.4.0",
+        Title = "Fortnite Porting 4.4.0-FPVU",
         SubTitle = "Tray-first startup, background content preparation, online improvements, new themes, and a smoother asset experience.",
-        Tag = "v4.4.0",
+        Tag = "v4.4.0-FPVU",
         Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
         Date = new DateTime(2026, 8, 15),
         Description = """
-                      Fortnite Porting 4.4.0
-                      =====================
+                      Fortnite Porting 4.4.0-FPVU
+                      ============================
 
                       This update focuses on getting Fortnite Porting ready before you need it, while making the app more comfortable to leave running throughout the day.
 
@@ -50,18 +50,18 @@ public static class ReleaseNews
                       """
     };
 
-    public static NewsEntry VersionFpvu => new()
+    public static NewsEntry Version441Fpvu => new()
     {
-        Title = "Fortnite Porting 4.4.0-fpvu",
+        Title = "Fortnite Porting 4.4.1-FPVU",
         SubTitle = "A polish update for online sign-in, Chat, theme selection, and app reliability.",
-        Tag = "v4.4.0-fpvu",
+        Tag = "v4.4.1-FPVU",
         Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
         Date = new DateTime(2026, 8, 16),
         Description = """
-                      Fortnite Porting 4.4.0-fpvu
+                      Fortnite Porting 4.4.1-FPVU
                       ============================
 
-                      This follow-up improves the online experience and fixes edge cases found after the 4.4.0 release.
+                      This follow-up improves the online experience and fixes edge cases found after the 4.4.0-FPVU release.
 
                       Account and Chat
                       ----------------
@@ -83,13 +83,13 @@ public static class ReleaseNews
 
     public static NewsEntry Version422Fpvu => new()
     {
-        Title = "Fortnite Porting 4.4.2-fpvu",
+        Title = "Fortnite Porting 4.4.2-FPVU",
         SubTitle = "Recoverable loading, smoother asset navigation, and a remembered workspace.",
-        Tag = "v4.4.2-fpvu",
+        Tag = "v4.4.2-FPVU",
         Image = "avares://FortnitePorting/Assets/News/4.4.0.png",
         Date = new DateTime(2026, 8, 16),
         Description = """
-                      Fortnite Porting 4.4.2-fpvu
+                      Fortnite Porting 4.4.2-FPVU
                       ============================
 
                       Loading recovery

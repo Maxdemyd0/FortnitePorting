@@ -37,7 +37,7 @@ public partial class HomeViewModel(
         TaskService.Run(async () =>
         {
             var newsResponse = await _api.FortnitePorting.News();
-            News = [ReleaseNews.Version422Fpvu, ReleaseNews.VersionFpvu, ReleaseNews.Version440, ..(newsResponse?.Entries ?? []).OrderByDescending(entry => entry.Date)];
+            News = [ReleaseNews.Version422Fpvu, ReleaseNews.Version441Fpvu, ReleaseNews.Version440Fpvu, ..(newsResponse?.Entries ?? []).OrderByDescending(entry => entry.Date)];
 
             var featuredArtResponse = await _api.FortnitePorting.FeaturedArt();
             var featured = featuredArtResponse.Entries.ToList();
