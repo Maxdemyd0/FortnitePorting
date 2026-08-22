@@ -96,7 +96,7 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
         "FortniteGame/Plugins/GameFeatures/BRCosmetics/Content/Animation/Game/MainPlayer/Menu/BR/Female_Commando_Idle_02_Rebirth_Montage"
     ];
 
-    private const EGame LATEST_GAME_VERSION = EGame.GAME_UE5_8;
+    private const EGame LATEST_GAME_VERSION = EGame.GAME_UE6_0;
     
     public DirectoryInfo CacheFolder => new(Path.Combine(App.ApplicationDataFolder.FullName, ".cache"));
 
@@ -331,19 +331,32 @@ public partial class CUE4ParseService : ObservableObject, IService, IResettable
             "pakchunk0-WindowsClient.pak");
         if (!File.Exists(mainPakPath)) return;
 
-        var mainPakReader = new PakFileReader(mainPakPath);
-        if (mainPakReader.TestAesKey(new FAesKey(aes.MainKey.Key)))
+        try
         {
-            Log.Information("Main key {Key} succeeded on pak {PakName}", aes.MainKey.Key, mainPakPath);
-            return;
+            var versions = Provider?.Versions ?? new VersionContainer(LATEST_GAME_VERSION);
+            var mainPakReader = new PakFileReader(mainPakPath, versions);
+            if (mainPakReader.TestAesKey(new FAesKey(aes.MainKey.Key)))
+            {
+                Log.Information("Main key {Key} succeeded on pak {PakName}", aes.MainKey.Key, mainPakPath);
+                return;
+            }
+
+            BlackHole.Open(isMinigame: false);
         }
-        
-        BlackHole.Open(isMinigame: false);
+        catch (Exception e)
+        {
+            // This is only a fast key preflight. New pak formats must not prevent the
+            // normal provider from attempting to load the configured installation.
+            Log.Warning(e, "Unable to validate the main key against {PakName}; continuing with provider initialization", mainPakPath);
+        }
     }
     
     [LoadingStage("Removing Outdated Cache Files", stage: 2, weight: 1)]
     private async Task CleanupCache()
     {
+        // The application data directory can change after the service has been constructed.
+        // Always ensure the current cache location exists before enumerating it.
+        CacheFolder.Create();
         var files = CacheFolder.GetFiles();
 
         var cutoffDate = DateTime.Now - TimeSpan.FromDays(AppSettings.Developer.ChunkCacheLifetime);
