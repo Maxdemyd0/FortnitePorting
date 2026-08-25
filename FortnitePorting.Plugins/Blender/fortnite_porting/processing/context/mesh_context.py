@@ -53,7 +53,14 @@ class MeshImportContext:
             
         if self.type in [EExportType.OUTFIT, EExportType.FALL_GUYS_OUTFIT] and self.options.get("MergeArmatures"):
             master_skeleton = merge_parts(self.imported_meshes)
+            if master_skeleton is None:
+                return
+
             master_mesh = get_armature_mesh(master_skeleton)
+            if master_mesh is None:
+                Log.warn("Merged outfit has no mesh; skipping post-import processing")
+                return
+
             # Update attribute to account for joined mesh
             self.update_preskinned_bounds(master_mesh)
             

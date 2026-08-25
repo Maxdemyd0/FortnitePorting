@@ -44,8 +44,8 @@ def merge_armatures(base_armature, extra_armatures):
     bone_tree = {}
     for bone in master_skeleton.data.bones:
         try:
-            bone_reg = re.sub(".\d\d\d", "", bone.name)
-            parent_reg = re.sub(".\d\d\d", "", bone.parent.name)
+            bone_reg = re.sub(r"\.\d{3}", "", bone.name)
+            parent_reg = re.sub(r"\.\d{3}", "", bone.parent.name)
             bone_tree[bone_reg] = parent_reg
         except AttributeError:
             pass
@@ -79,8 +79,19 @@ def merge_parts(parts):
         else:
             merge_parts.append(part)
 
-    body_part = first(merge_parts, lambda p: p.get("Type") == EFortCustomPartType.BODY)
-    other_parts = where(merge_parts, lambda p: p.get("Type") != EFortCustomPartType.BODY)
+    valid_parts = [part for part in merge_parts if part.get("Skeleton") is not None]
+    if not valid_parts:
+        Log.warn("No importable outfit parts were received; skipping armature merge")
+        return None
+
+    body_part = first(valid_parts, lambda p: p.get("Type") == EFortCustomPartType.BODY)
+    if body_part is None:
+        # Keep the imported meshes usable if a new game build introduces an
+        # unfamiliar part enum. The first valid skeletal part is a safe base.
+        Log.warn("No body part was received; using the first skeletal part as the merge base")
+        body_part = valid_parts[0]
+
+    other_parts = [part for part in valid_parts if part is not body_part]
 
     base_armature = body_part.get("Skeleton")
     extra_armatures = [p.get("Skeleton") for p in other_parts]

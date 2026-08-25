@@ -32,7 +32,13 @@ public partial class ExportContext
         var exportPart = Mesh<ExportPart>(skeletalMesh);
         if (exportPart is null) return null;
         
-        exportPart.Type = part.GetEnumOrDefault("CharacterPartType", EFortCustomPartType.Head);
+        // CharacterPartType is serialized as an sbyte in current Fortnite builds.
+        // Decode that representation explicitly before falling back to the older
+        // enum/name representations; otherwise body parts can become heads and
+        // Blender cannot find a base armature when merging the outfit.
+        exportPart.Type = part.TryGetValue<sbyte>(out var partType, "CharacterPartType")
+            ? (EFortCustomPartType) partType
+            : part.GetEnumOrDefault("CharacterPartType", EFortCustomPartType.Head);
 
         exportPart.GenderPermitted = part.GetEnumOrDefault("GenderPermitted", EFortCustomGender.Male);
 
